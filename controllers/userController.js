@@ -1,0 +1,135 @@
+const User = require("../models/User");
+const Notification = require("../models/Notification");
+
+/* GET CURRENT USER */
+exports.getCurrentUser = async (req, res) => {
+  try {
+
+    const user = await User.findById(req.user.id)
+      .select("-password")
+      .populate("followers following", "username email");
+
+    res.json(user);
+
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+
+/* FOLLOW USER */
+exports.followUser = async (req, res) => {
+  try {
+
+    if (req.user.id === req.params.id) {
+      return res.status(400).json({ msg: "You cannot follow yourself" });
+    }
+
+    const userToFollow = await User.findById(req.params.id);
+    const currentUser = await User.findById(req.user.id);
+
+    if (!userToFollow) {
+      return res.status(404).json({ msg: "User not found" });
+    }
+
+    if (currentUser.following.includes(req.params.id)) {
+      return res.status(400).json({ msg: "Already following" });
+    }
+
+    currentUser.following.push(req.params.id);
+    userToFollow.followers.push(req.user.id);
+
+    await currentUser.save();
+    await userToFollow.save();
+
+    /* SEND FOLLOW NOTIFICATION */
+    if (userToFollow._id.toString() !== req.user.id) {
+
+      await Notification.create({
+        recipient: userToFollow._id,
+        sender: req.user.id,
+        type: "follow"
+      });
+
+    }
+
+    res.json({ msg: "User followed successfully" });
+
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+
+/* UNFOLLOW USER */
+exports.unfollowUser = async (req, res) => {
+  try {
+
+    const userToUnfollow = await User.findById(req.params.id);
+    const currentUser = await User.findById(req.user.id);
+
+    if (!userToUnfollow) {
+      return res.status(404).json({ msg: "User not found" });
+    }
+
+    currentUser.following = currentUser.following.filter(
+      id => id.toString() !== req.params.id
+    );
+
+    userToUnfollow.followers = userToUnfollow.followers.filter(
+      id => id.toString() !== req.user.id
+    );
+
+    await currentUser.save();
+    await userToUnfollow.save();
+
+    res.json({ msg: "User unfollowed successfully" });
+
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/* OTHER USER PROFILE VIEW */
+exports.getUserProfile = async (req, res) => {
+
+  const user = await User.findById(req.params.id)
+    .select("-password")
+    .populate("followers following", "username");
+
+  res.json(user);
+
+};
+
+/* GET USER PROFILE */
+exports.getUserProfile = async (req, res) => {
+  try {
+
+    const user = await User.findById(req.params.id)
+      .select("-password")
+      .populate("followers following", "username");
+
+    if (!user)
+      return res.status(404).json({ msg: "User not found" });
+
+    const posts = await Post.find({ author: req.params.id })
+      .sort({ createdAt: -1 });
+
+    /* CHECK FOLLOW STATUS */
+
+    const currentUser = await User.findById(req.user.id);
+
+    const isFollowing = currentUser.following.includes(user._id);
+
+    res.json({
+      user,
+      posts,
+      followersCount: user.followers.length,
+      followingCount: user.following.length,
+      isFollowing
+    });
+
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};

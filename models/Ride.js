@@ -1,0 +1,130 @@
+const mongoose = require("mongoose");
+
+const rideSchema = new mongoose.Schema(
+{
+  title: {
+    type: String,
+    required: true,
+    trim: true
+  },
+
+  description: {
+    type: String,
+    default: ""
+  },
+
+  startLocation: {
+    type: String,
+    required: true
+  },
+
+  destination: {
+    type: String,
+    required: true
+  },
+
+  rideDate: {
+    type: Date,
+    required: true
+  },
+
+  rideImage: {
+    type: String,
+    default: ""
+  },
+
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true
+  },
+
+  club: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Club",
+    default: null
+  },
+
+  participants: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User"
+    }
+  ],
+
+  joinRequests: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User"
+    }
+  ],
+
+  maxParticipants: {
+    type: Number,
+    default: 20
+  },
+
+  participantsCount: {
+    type: Number,
+    default: 0
+  },
+
+  commentsCount: {
+    type: Number,
+    default: 0
+  },
+
+  status: {
+    type: String,
+    enum: ["upcoming", "completed", "cancelled"],
+    default: "upcoming"
+  },
+  route: {
+  type: {
+    type: String,
+    enum: ["LineString"],
+    default: "LineString"
+  },
+  coordinates: [[Number]] // [lng, lat]
+},
+
+totalDistance: {
+  type: Number,
+  default: 0
+},
+
+averageSpeed: {
+  type: Number,
+  default: 0
+},
+
+rideDuration: {
+  type: Number,
+  default: 0
+},
+  riderLocations: [
+  {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User"
+    },
+    location: {
+      type: {
+        type: String,
+        enum: ["Point"],
+        default: "Point"
+      },
+      coordinates: [Number] // [lng, lat]
+    },
+    updatedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }
+]
+
+},
+{ timestamps: true }
+);
+
+module.exports = mongoose.model("Ride", rideSchema);
